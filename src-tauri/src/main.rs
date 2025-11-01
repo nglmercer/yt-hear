@@ -7,11 +7,6 @@ use tauri::SystemTray;
 use tauri::*;
 use tauri::{CustomMenuItem, SystemTrayMenu, SystemTrayMenuItem};
 
-#[derive(Clone, serde::Serialize)]
-struct Payload {
-    args: Vec<String>,
-    cwd: String,
-}
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 
 fn main() {
@@ -37,24 +32,8 @@ fn main() {
     ";
 
     Builder::default()
-        .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
-            app.emit_all("single-instance", Payload { args: argv, cwd })
-                .unwrap();
-        }))
         .system_tray(system_tray)
-        .setup(|app| {
-            #[cfg(debug_assertions)]
-            {
-                let handle = app.handle();
-                let id = app.listen_global("single-instance", move |_| {
-                    handle
-                        .get_window("main")
-                        .unwrap()
-                        .show()
-                        .expect("could not show main window");
-                });
-                app.unlisten(id);
-            }
+        .setup(|_app| {
             Ok(())
         })
         .on_page_load(|window, _| {

@@ -1,7 +1,7 @@
 {
   "build": {
-    "beforeDevCommand": "yarn dev",
-    "beforeBuildCommand": "yarn build",
+    "beforeDevCommand": "bun run dev",
+    "beforeBuildCommand": "bun run build",
     "devPath": "http://localhost:1420",
     "distDir": "./dist",
     "withGlobalTauri": false
@@ -52,7 +52,7 @@
       }
     },
     "security": {
-      "csp": null
+      "csp": "default-src 'self' https://music.youtube.com https://*.googlevideo.com https://*.youtube.com https://*.google.com; script-src 'self' 'unsafe-inline' https://music.youtube.com https://*.youtube.com; style-src 'self' 'unsafe-inline' https://music.youtube.com https://*.youtube.com; img-src 'self' data: https://*.googleusercontent.com https://*.youtube.com https://*.google.com; media-src 'self' https://*.googlevideo.com https://*.youtube.com; connect-src 'self' https://music.youtube.com https://*.youtube.com https://*.google.com"
     },
     "updater": {
       "active": false
@@ -70,7 +70,7 @@
       {
         "label": "main",
         "url": "https://music.youtube.com",
-        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:108.0) Gecko/20100101 Firefox/108.0",
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         "minWidth": 320.0,
         "minHeight": 320.0,
         "title": "tatar",
