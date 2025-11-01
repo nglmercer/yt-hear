@@ -6,8 +6,8 @@
   "build": {
     "beforeDevCommand": "bun run dev",
     "beforeBuildCommand": "bun run build",
-    "devUrl": "http://localhost:1420",
-    "frontendDist": "./dist"
+    "devUrl": "http://localhost:3000",
+    "frontendDist": "../dist"
   },
   "app": {
     "windows": [
@@ -61,7 +61,7 @@
     }
   },
   "plugins": {
-    "systemTray": {
+    "tray-icon": {
       "iconPath": "icons/icon.png",
       "iconAsTemplate": true,
       "menuOnLeftClick": false
