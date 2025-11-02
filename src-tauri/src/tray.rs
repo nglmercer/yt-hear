@@ -10,8 +10,20 @@ pub fn create_tray(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Err
     let hide = MenuItem::with_id(app, "hide", "Hide", true, None::<String>)?;
     let separator1 = PredefinedMenuItem::separator(app)?;
     let settings = MenuItem::with_id(app, "settings", "Settings", true, None::<String>)?;
-    let adblock_status = MenuItem::with_id(app, "adblock_status", "AdBlock Status", true, None::<String>)?;
-    let update_adblock = MenuItem::with_id(app, "update_adblock", "Update AdBlock Filters", true, None::<String>)?;
+    let adblock_status = MenuItem::with_id(
+        app,
+        "adblock_status",
+        "AdBlock Status",
+        true,
+        None::<String>,
+    )?;
+    let update_adblock = MenuItem::with_id(
+        app,
+        "update_adblock",
+        "Update AdBlock Filters",
+        true,
+        None::<String>,
+    )?;
     let about = MenuItem::with_id(app, "about", "About", true, None::<String>)?;
     let separator2 = PredefinedMenuItem::separator(app)?;
     let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<String>)?;

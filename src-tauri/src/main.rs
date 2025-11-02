@@ -44,7 +44,7 @@ fn main() {
             let _ = window.eval(ADBLOCK_INIT_SCRIPT);
         })
         .on_window_event(|window, event| {
-            window::handle_window_event(&window, event);
+            window::handle_window_event(window, event);
         })
         .on_menu_event(|app, event| {
             tray::handle_menu_event(app, event);
