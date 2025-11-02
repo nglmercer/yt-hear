@@ -1,8 +1,8 @@
-use adblock::{lists::FilterFormat, request::Request, Engine, FilterSet};
+use adblock::{lists::ParseOptions, request::Request, Engine, FilterSet};
 use std::fs;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime};
 use tauri::{
     plugin::{Builder, TauriPlugin},
     Manager, Runtime,
@@ -15,8 +15,13 @@ const CACHE_DURATION_DAYS: u64 = 7; // Actualizar cada 7 días
 // Motor de AdBlock compartido entre todas las ventanas
 struct AdBlockEngine {
     engine: Arc<Mutex<Engine>>,
+    #[allow(dead_code)]
     cache_dir: PathBuf,
 }
+
+// Implement Send + Sync for AdBlockEngine to satisfy Tauri requirements
+unsafe impl Send for AdBlockEngine {}
+unsafe impl Sync for AdBlockEngine {}
 
 impl AdBlockEngine {
     fn new(cache_dir: PathBuf) -> Self {
@@ -74,7 +79,7 @@ impl AdBlockEngine {
         // Agregar filtros manuales
         for filter in manual_filters {
             if filter_set
-                .add_filter(filter, FilterFormat::Standard)
+                .add_filter(filter, ParseOptions::default())
                 .is_ok()
             {
                 total_filters += 1;
@@ -173,7 +178,7 @@ impl AdBlockEngine {
             }
 
             // Agregar filtro
-            if filter_set.add_filter(line, FilterFormat::Standard).is_ok() {
+            if filter_set.add_filter(line, ParseOptions::default()).is_ok() {
                 count += 1;
             }
         }
@@ -329,7 +334,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
                 eprintln!("⚠️ Failed to inject AdBlock script: {}", e);
             }
         })
-        .on_navigation(|window, url| {
+        .on_navigation(|_window, url| {
             println!("🔗 Navigation to: {}", url);
             true // Permitir navegación
         })
@@ -344,5 +349,6 @@ async fn check_adblock(
     request_type: String,
     state: tauri::State<'_, AdBlockEngine>,
 ) -> Result<bool, String> {
-    Ok(state.should_block(&url, &source_url, &request_type))
+    let engine = state.inner();
+    Ok(engine.should_block(&url, &source_url, &request_type))
 }
