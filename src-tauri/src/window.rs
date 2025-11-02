@@ -33,7 +33,11 @@ pub fn handle_run_event(app_handle: &AppHandle, event: &RunEvent) -> bool {
             // Don't prevent exit, let it happen naturally
             return true;
         }
-        RunEvent::WindowEvent { label, event: WindowEvent::Destroyed, .. } => {
+        RunEvent::WindowEvent {
+            label,
+            event: WindowEvent::Destroyed,
+            ..
+        } => {
             // If main window is destroyed, clean up and exit
             if label == "main" {
                 super::cleanup_and_exit(app_handle);
