@@ -26,7 +26,7 @@ jobs:
       if: matrix.platform == 'ubuntu-latest'
       run: |
         sudo apt-get update
-        sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf libglib2.0-dev libgobject-2.0-0 libgio-2.0-0 pkg-config
+        sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf libglib2.0-dev pkg-config
         
     - name: Rust setup
       uses: dtolnay/rust-toolchain@stable
@@ -43,10 +43,9 @@ jobs:
         
     - name: Install frontend dependencies
       run: bun install
-  -++++++ REPLACE
       
     - name: Run frontend tests
-      run: bun test || true  # Allow to fail if no tests exist
+      run: bun test || true
       
     - name: Check frontend build
       run: bun run build
@@ -57,10 +56,11 @@ jobs:
       
     - name: Run Rust tests
       working-directory: ./src-tauri
-      run: cargo test || true  # Allow to fail if no tests exist
+      run: cargo test || true
       
-    - name: Check Tauri build (dry run)
+    - name: Build Tauri app (debug)
       uses: tauri-apps/tauri-action@v0
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tauriScript: tauri build
         args: --debug
