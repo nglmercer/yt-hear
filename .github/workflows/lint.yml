@@ -1,0 +1,51 @@
+name: Lint
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v1
+      with:
+        bun-version: latest
+        
+    - name: Install frontend dependencies
+      run: bun install
+      
+    - name: Check frontend formatting
+      run: bun run lint || true  # Allow to fail if no linter exists
+      
+  backend:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Rust setup
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: rustfmt, clippy
+        
+    - name: Rust cache
+      uses: swatinem/rust-cache@v2
+      with:
+        workspaces: './src-tauri -> target'
+        
+    - name: Check Rust formatting
+      working-directory: ./src-tauri
+      run: cargo fmt --all -- --check
+      
+    - name: Run Rust linter
+      working-directory: ./src-tauri
+      run: cargo clippy --all-targets --all-features -- -D warnings

@@ -1,0 +1,78 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [ubuntu-latest, windows-latest]
+        
+    runs-on: ${{ matrix.platform }}
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Install dependencies (ubuntu only)
+      if: matrix.platform == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
+        
+    - name: Rust setup
+      uses: dtolnay/rust-toolchain@stable
+      
+    - name: Rust cache
+      uses: swatinem/rust-cache@v2
+      with:
+        workspaces: './src-tauri -> target'
+        
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v1
+      with:
+        bun-version: latest
+        
+    - name: Install frontend dependencies
+      run: bun install
+      
+    - name: Build the app
+      uses: tauri-apps/tauri-action@v0
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tagName: ${{ github.ref_name }}
+        releaseName: 'tatar ${{ github.ref_name }}'
+        releaseBody: |
+          See the assets to download and install this version.
+          
+          ## Installation
+          
+          ### Windows
+          Download `tatar_[version]_x64_setup.msi` and run it.
+          
+          ### Linux
+          Download `tatar_[version]_amd64.deb` and install with:
+          ```bash
+          sudo dpkg -i tatar_[version]_amd64.deb
+          sudo apt-get install -f  # Fix dependencies if needed
+          ```
+          
+          Or download the AppImage: `tatar_[version]_amd64.AppImage` and run:
+          ```bash
+          chmod +x tatar_[version]_amd64.AppImage
+          ./tatar_[version]_amd64.AppImage
+          ```
+        releaseDraft: true
+        prerelease: false
+        includeDebug: false
+        includeRelease: true

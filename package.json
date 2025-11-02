@@ -1,7 +1,7 @@
 {
   "name": "tatar",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,8 +12,7 @@
     "tauri-build": "tauri build"
   },
   "dependencies": {
-    "@tauri-apps/api": "^2.1.0",
-    "vue": "^3.4.38"
+    "@tauri-apps/api": "^2.1.0"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.1.0",

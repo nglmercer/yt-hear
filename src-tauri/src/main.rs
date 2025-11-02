@@ -21,28 +21,21 @@ fn main() {
         });
     }));
 
-    let custom_ui_injector_js = r#"
-
-    "#;
-
     let result = std::panic::catch_unwind(|| {
         tauri::Builder::default()
             .invoke_handler(tauri::generate_handler![
                 minimize_window,
                 toggle_maximize,
-                close_window
+                close_window,
             ])
-            .setup(move |app| {
-                let window = app.get_webview_window("main").unwrap();
-                if let Err(e) = window.eval(custom_ui_injector_js) {
-                    eprintln!("Failed to inject custom UI: {}", e);
-                }
+            .setup(|app| {
+                let _window = app.get_webview_window("main").unwrap();
                 
-                // Create system tray
+                // Create system tray first
                 if let Err(e) = tray::create_tray(app) {
                     eprintln!("Failed to create system tray: {}", e);
                 }
-                    
+                
                 Ok(())
             })
             .on_window_event(|window, event| {
@@ -101,7 +94,6 @@ fn close_window(window: tauri::Window) {
         eprintln!("Failed to close window: {}", e);
     }
 }
-
 pub fn cleanup_and_exit(_app: &tauri::AppHandle) {
     // Force exit after a short delay to ensure cleanup
     std::thread::spawn(|| {
