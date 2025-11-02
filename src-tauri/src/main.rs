@@ -22,12 +22,16 @@ fn main() {
     }));
 
     let custom_ui_injector_js = r#"
-    // Custom UI injector for YouTube Music
-    console.log("Tatar - YouTube Music Desktop App");
+
     "#;
 
     let result = std::panic::catch_unwind(|| {
         tauri::Builder::default()
+            .invoke_handler(tauri::generate_handler![
+                minimize_window,
+                toggle_maximize,
+                close_window
+            ])
             .setup(move |app| {
                 let window = app.get_webview_window("main").unwrap();
                 if let Err(e) = window.eval(custom_ui_injector_js) {
@@ -68,6 +72,33 @@ fn main() {
             std::thread::sleep(std::time::Duration::from_millis(100));
             std::process::exit(1);
         });
+    }
+}
+
+#[tauri::command]
+fn minimize_window(window: tauri::Window) {
+    if let Err(e) = window.minimize() {
+        eprintln!("Failed to minimize window: {}", e);
+    }
+}
+
+#[tauri::command]
+fn toggle_maximize(window: tauri::Window) {
+    if window.is_maximized().unwrap_or(false) {
+        if let Err(e) = window.unmaximize() {
+            eprintln!("Failed to unmaximize window: {}", e);
+        }
+    } else {
+        if let Err(e) = window.maximize() {
+            eprintln!("Failed to maximize window: {}", e);
+        }
+    }
+}
+
+#[tauri::command]
+fn close_window(window: tauri::Window) {
+    if let Err(e) = window.close() {
+        eprintln!("Failed to close window: {}", e);
     }
 }
 

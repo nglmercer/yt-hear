@@ -21,7 +21,9 @@
         "minHeight": 320,
         "resizable": true,
         "decorations": true,
-        "titleBarStyle": "Overlay"
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "transparent": true
       },
       {
         "label": "settings",
@@ -64,7 +66,8 @@
     "tray-icon": {
       "iconPath": "icons/icon.png",
       "iconAsTemplate": true,
-      "menuOnLeftClick": false
+      "menuOnLeftClick": false,
+      "tooltip": "Tatar - YouTube Music"
     }
   }
 }

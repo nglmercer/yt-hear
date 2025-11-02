@@ -1,4 +1,4 @@
-use tauri::{AppHandle, Manager, menu::{Menu, MenuItem, PredefinedMenuItem}, tray::{TrayIconBuilder, TrayIconEvent}};
+use tauri::{AppHandle, Manager, menu::{Menu, MenuItem, PredefinedMenuItem}, tray::{TrayIconBuilder, TrayIconEvent, MouseButton}};
 
 pub fn create_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     // Create menu items with IDs for proper event handling
@@ -16,6 +16,7 @@ pub fn create_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error
         .menu(&menu)
         .tooltip("Tatar - YouTube Music")
         .show_menu_on_left_click(false)
+        .icon(app.default_window_icon().unwrap().clone())
         .build(app)?;
         
     Ok(())
@@ -28,7 +29,7 @@ pub fn handle_tray_event(app: &AppHandle, event: TrayIconEvent) {
             ..
         } => {
             // Left click - toggle window visibility
-            if button == tauri::tray::MouseButton::Left {
+            if button == MouseButton::Left {
                 let window = app.get_webview_window("main").unwrap();
                 if window.is_visible().unwrap_or(false) {
                     let _ = window.hide();
@@ -43,7 +44,7 @@ pub fn handle_tray_event(app: &AppHandle, event: TrayIconEvent) {
             ..
         } => {
             // Double click - show and focus window
-            if button == tauri::tray::MouseButton::Left {
+            if button == MouseButton::Left {
                 let window = app.get_webview_window("main").unwrap();
                 let _ = window.show();
                 let _ = window.set_focus();
