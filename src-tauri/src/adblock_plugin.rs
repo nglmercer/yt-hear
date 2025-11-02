@@ -1,15 +1,13 @@
+use adblock::{lists::ParseOptions, request::Request, Engine, FilterSet};
+use std::collections::HashMap;
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, SystemTime};
 use tauri::{
     plugin::{Builder, TauriPlugin},
-    Runtime, Manager, State, Webview,
+    Manager, Runtime, State, Webview,
 };
-use adblock::{
-    Engine, FilterSet, lists::ParseOptions, request::Request,
-};
-use std::fs;
-use std::path::PathBuf;
-use std::time::{SystemTime, Duration};
-use std::sync::{Arc, Mutex};
-use std::collections::HashMap;
 
 const EASYLIST_URL: &str = "https://easylist.to/easylist/easylist.txt";
 const EASYPRIVACY_URL: &str = "https://easylist.to/easylist/easyprivacy.txt";
@@ -26,26 +24,18 @@ struct AdBlockEngine {
 impl AdBlockEngine {
     fn new(cache_dir: PathBuf) -> Self {
         println!("🛡️ Initializing AdBlock Engine...");
-        
+
         // Crear directorio de caché si no existe
         if !cache_dir.exists() {
             fs::create_dir_all(&cache_dir).ok();
         }
 
         let mut filter_set = FilterSet::new(false);
-        
+
         // Cargar listas de filtros
-        let easylist = Self::load_filter_list(
-            &cache_dir,
-            "easylist.txt",
-            EASYLIST_URL
-        );
-        
-        let easyprivacy = Self::load_filter_list(
-            &cache_dir,
-            "easyprivacy.txt",
-            EASYPRIVACY_URL
-        );
+        let easylist = Self::load_filter_list(&cache_dir, "easylist.txt", EASYLIST_URL);
+
+        let easyprivacy = Self::load_filter_list(&cache_dir, "easyprivacy.txt", EASYPRIVACY_URL);
 
         // Agregar filtros básicos manuales
         let manual_filters = vec![
@@ -56,15 +46,12 @@ impl AdBlockEngine {
             "||google-analytics.com^",
             "||googletagmanager.com^",
             "||googletagservices.com^",
-            
             // Facebook tracking
             "||facebook.com/tr^",
             "||connect.facebook.net^",
-            
             // Patrones comunes
             "*/ads.js",
             "*/advertising.js",
-            
             // Filtros cosméticos comunes
             "##.ad-container",
             "##.ads",
@@ -95,21 +82,27 @@ impl AdBlockEngine {
 
         // Agregar filtros manuales
         for filter in manual_filters {
-            if filter_set.add_filter(filter, ParseOptions::default()).is_ok() {
+            if filter_set
+                .add_filter(filter, ParseOptions::default())
+                .is_ok()
+            {
                 total_filters += 1;
             }
         }
-        
+
         // Inicializar recursos para reemplazo
         let mut resources = HashMap::new();
-        
+
         // Agregar recursos básicos
         resources.insert(
             "1x1-transparent.gif".to_string(),
             "R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7".to_string(), // base64 de 1x1 transparent gif
         );
-        
-        println!("✅ AdBlock Engine initialized with {} total filters", total_filters);
+
+        println!(
+            "✅ AdBlock Engine initialized with {} total filters",
+            total_filters
+        );
 
         Self {
             cache_dir,
@@ -123,20 +116,18 @@ impl AdBlockEngine {
         if let Ok(filter_set) = self.filter_set.lock() {
             // Crear engine temporal para esta solicitud
             let engine = Engine::from_filter_set(filter_set.clone(), true);
-            
+
             // Crear la request para el engine
-            let request = Request::new(
-                url,
-                source_url,
-                request_type,
-            ).unwrap_or_else(|_| {
-                Request::new(url, "", "other").unwrap()
-            });
+            let request = Request::new(url, source_url, request_type)
+                .unwrap_or_else(|_| Request::new(url, "", "other").unwrap());
 
             let result = engine.check_network_request(&request);
-            
+
             if result.matched {
-                println!("🚫 Blocked: {} (type: {}, source: {})", url, request_type, source_url);
+                println!(
+                    "🚫 Blocked: {} (type: {}, source: {})",
+                    url, request_type, source_url
+                );
                 true
             } else {
                 false
@@ -146,39 +137,39 @@ impl AdBlockEngine {
             false
         }
     }
-    
+
     fn get_cosmetic_filters(&self, url: &str) -> Vec<String> {
         if let Ok(filter_set) = self.filter_set.lock() {
             // Crear engine temporal para esta solicitud
             let engine = Engine::from_filter_set(filter_set.clone(), true);
-            
+
             // Obtener filtros cosméticos para la URL
             let cosmetic_resources = engine.url_cosmetic_resources(url);
-            
+
             // Extraer los selectores CSS
             let mut selectors = Vec::new();
-            
+
             // Agregar selectores de hide rules
             for filter in &cosmetic_resources.hide_selectors {
                 selectors.push(filter.clone());
             }
-            
+
             // Agregar selectores de generic hide
             if cosmetic_resources.generichide {
                 selectors.push("html > body".to_string());
             }
-            
+
             selectors
         } else {
             eprintln!("❌ Failed to acquire lock on filter set for cosmetic filters");
             Vec::new()
         }
     }
-    
+
     fn get_resource_replacement(&self, url: &str) -> Option<String> {
         if let Ok(resources) = self.resources.lock() {
             // Extraer el nombre del recurso de la URL
-            if let Some(resource_name) = url.split('/').last() {
+            if let Some(resource_name) = url.split('/').next_back() {
                 resources.get(resource_name).cloned()
             } else {
                 None
@@ -188,56 +179,52 @@ impl AdBlockEngine {
             None
         }
     }
-    
+
     fn update_filters(&self) -> Result<usize, String> {
         println!("🔄 Updating AdBlock filters...");
-        
+
         // Forzar la descarga de nuevas listas
-        let easylist = Self::load_filter_list(
-            &self.cache_dir,
-            "easylist.txt",
-            EASYLIST_URL
-        );
-        
-        let easyprivacy = Self::load_filter_list(
-            &self.cache_dir,
-            "easyprivacy.txt",
-            EASYPRIVACY_URL
-        );
-        
+        let easylist = Self::load_filter_list(&self.cache_dir, "easylist.txt", EASYLIST_URL);
+
+        let easyprivacy =
+            Self::load_filter_list(&self.cache_dir, "easyprivacy.txt", EASYPRIVACY_URL);
+
         if let Ok(mut filter_set) = self.filter_set.lock() {
             let mut total_filters = 0;
-            
+
             // Crear nuevo filter set
             let mut new_filter_set = FilterSet::new(false);
-            
+
             // Agregar EasyList
             if let Some(content) = easylist {
                 let count = Self::add_filters_from_content(&mut new_filter_set, &content);
                 println!("✅ Updated {} filters from EasyList", count);
                 total_filters += count;
             }
-            
+
             // Agregar EasyPrivacy
             if let Some(content) = easyprivacy {
                 let count = Self::add_filters_from_content(&mut new_filter_set, &content);
                 println!("✅ Updated {} filters from EasyPrivacy", count);
                 total_filters += count;
             }
-            
+
             // Reemplazar el filter set
             *filter_set = new_filter_set;
-            
-            println!("✅ AdBlock Engine updated with {} total filters", total_filters);
+
+            println!(
+                "✅ AdBlock Engine updated with {} total filters",
+                total_filters
+            );
             Ok(total_filters)
         } else {
             Err("Failed to acquire lock on filter set".to_string())
         }
     }
 
-    fn load_filter_list(cache_dir: &PathBuf, filename: &str, url: &str) -> Option<String> {
+    fn load_filter_list(cache_dir: &Path, filename: &str, url: &str) -> Option<String> {
         let cache_path = cache_dir.join(filename);
-        
+
         // Verificar si existe caché y si está actualizado
         if cache_path.exists() {
             if let Ok(metadata) = fs::metadata(&cache_path) {
@@ -245,7 +232,7 @@ impl AdBlockEngine {
                     let age = SystemTime::now()
                         .duration_since(modified)
                         .unwrap_or(Duration::from_secs(0));
-                    
+
                     // Si el caché tiene menos de CACHE_DURATION_DAYS días, usarlo
                     if age < Duration::from_secs(CACHE_DURATION_DAYS * 24 * 60 * 60) {
                         println!("📦 Using cached {}", filename);
@@ -274,7 +261,7 @@ impl AdBlockEngine {
             }
             Err(e) => {
                 eprintln!("❌ Failed to download {}: {}", filename, e);
-                
+
                 // Intentar usar caché antiguo como fallback
                 if cache_path.exists() {
                     println!("🔙 Using old cache for {}", filename);
@@ -288,7 +275,7 @@ impl AdBlockEngine {
 
     fn download_filter_list(url: &str) -> Result<String, Box<dyn std::error::Error>> {
         use std::io::Read;
-        
+
         // Crear cliente HTTP con timeout
         let client = ureq::AgentBuilder::new()
             .timeout_connect(std::time::Duration::from_secs(10))
@@ -298,27 +285,27 @@ impl AdBlockEngine {
         let response = client.get(url).call()?;
         let mut content = String::new();
         response.into_reader().read_to_string(&mut content)?;
-        
+
         Ok(content)
     }
 
     fn add_filters_from_content(filter_set: &mut FilterSet, content: &str) -> usize {
         let mut count = 0;
-        
+
         for line in content.lines() {
             let line = line.trim();
-            
+
             // Ignorar comentarios y líneas vacías
             if line.is_empty() || line.starts_with('!') || line.starts_with('[') {
                 continue;
             }
-            
+
             // Agregar filtro
             if filter_set.add_filter(line, ParseOptions::default()).is_ok() {
                 count += 1;
             }
         }
-        
+
         count
     }
 }
@@ -327,24 +314,22 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
     Builder::new("adblock")
         .setup(|app, _api| {
             // Obtener directorio de caché de la app
-            let cache_dir = app.path()
-                .app_cache_dir()
-                .unwrap_or_else(|_| {
-                    // Fallback a directorio temporal
-                    std::env::temp_dir().join("tauri-adblock")
-                });
+            let cache_dir = app.path().app_cache_dir().unwrap_or_else(|_| {
+                // Fallback a directorio temporal
+                std::env::temp_dir().join("tauri-adblock")
+            });
 
             println!("📁 AdBlock cache directory: {:?}", cache_dir);
 
             // Inicializar el motor de AdBlock
             let adblock = AdBlockEngine::new(cache_dir);
             app.manage(adblock);
-            
+
             Ok(())
         })
         .on_webview_ready(|window| {
             println!("🌐 WebView ready, setting up AdBlock...");
-            
+
             // Inyectar script para AdBlock
             if let Err(e) = setup_adblock_injection(&window) {
                 eprintln!("⚠️ Failed to inject AdBlock script: {}", e);
@@ -352,12 +337,12 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
         })
         .on_navigation(|window, url| {
             println!("🔗 Navigation to: {}", url);
-            
+
             // Aplicar filtros cosméticos para la nueva página
-            if let Err(e) = apply_cosmetic_filters(&window, &url.to_string()) {
+            if let Err(e) = apply_cosmetic_filters(window, url.as_ref()) {
                 eprintln!("⚠️ Failed to apply cosmetic filters: {}", e);
             }
-            
+
             true // Permitir navegación
         })
         .invoke_handler(tauri::generate_handler![
@@ -369,7 +354,9 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
         .build()
 }
 
-fn setup_adblock_injection<R: Runtime>(window: &Webview<R>) -> Result<(), Box<dyn std::error::Error>> {
+fn setup_adblock_injection<R: Runtime>(
+    window: &Webview<R>,
+) -> Result<(), Box<dyn std::error::Error>> {
     let script = r#"
     (function() {
         console.log('🛡️ AdBlock injection started');
@@ -517,8 +504,12 @@ fn setup_adblock_injection<R: Runtime>(window: &Webview<R>) -> Result<(), Box<dy
     Ok(())
 }
 
-fn apply_cosmetic_filters<R: Runtime>(window: &Webview<R>, url: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let script = format!(r#"
+fn apply_cosmetic_filters<R: Runtime>(
+    window: &Webview<R>,
+    url: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let script = format!(
+        r#"
     (function() {{
         console.log('🎨 Applying cosmetic filters for:', {});
         
@@ -532,7 +523,10 @@ fn apply_cosmetic_filters<R: Runtime>(window: &Webview<R>, url: &str) -> Result<
             }});
         }}
     }})();
-    "#, serde_json::json!(url), serde_json::json!(url));
+    "#,
+        serde_json::json!(url),
+        serde_json::json!(url)
+    );
 
     window.eval(&script)?;
     Ok(())
@@ -557,9 +551,7 @@ async fn get_cosmetic_filters(
 }
 
 #[tauri::command]
-async fn update_filters(
-    state: State<'_, AdBlockEngine>,
-) -> Result<usize, String> {
+async fn update_filters(state: State<'_, AdBlockEngine>) -> Result<usize, String> {
     state.update_filters()
 }
 

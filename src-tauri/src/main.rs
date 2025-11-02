@@ -45,10 +45,8 @@ fn main() {
         })
         .build(tauri::generate_context!())
         .expect("Failed to run Tauri application")
-        .run(|_app_handle, event| {
-            if let tauri::RunEvent::ExitRequested { .. } = event {
-                // Cleanup
-            }
+        .run(|app_handle, event| {
+            window::handle_run_event(app_handle, &event);
         });
 }
 
