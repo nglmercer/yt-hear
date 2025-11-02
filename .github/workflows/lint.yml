@@ -31,11 +31,6 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-      
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libglib2.0-dev pkg-config
         
     - name: Rust setup
       uses: dtolnay/rust-toolchain@stable
@@ -50,6 +45,11 @@ jobs:
     - name: Check Rust formatting
       working-directory: ./src-tauri
       run: cargo fmt --all -- --check
+      
+    - name: Install system dependencies for Clippy
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libglib2.0-dev pkg-config
       
     - name: Run Rust linter
       working-directory: ./src-tauri
