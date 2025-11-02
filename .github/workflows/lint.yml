@@ -32,6 +32,11 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
       
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libglib2.0-dev libgobject-2.0-dev libgio-2.0-dev pkg-config
+        
     - name: Rust setup
       uses: dtolnay/rust-toolchain@stable
       with:
