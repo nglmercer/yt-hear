@@ -1,12 +1,12 @@
-use tauri::{
-    plugin::{Builder, TauriPlugin},
-    Runtime, Manager,
-};
-use adblock::{Engine, FilterSet, lists::FilterFormat, request::Request};
-use std::sync::{Arc, Mutex};
+use adblock::{lists::FilterFormat, request::Request, Engine, FilterSet};
 use std::fs;
 use std::path::PathBuf;
-use std::time::{SystemTime, UNIX_EPOCH, Duration};
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use tauri::{
+    plugin::{Builder, TauriPlugin},
+    Manager, Runtime,
+};
 
 const EASYLIST_URL: &str = "https://easylist.to/easylist/easylist.txt";
 const EASYPRIVACY_URL: &str = "https://easylist.to/easylist/easyprivacy.txt";
@@ -21,26 +21,18 @@ struct AdBlockEngine {
 impl AdBlockEngine {
     fn new(cache_dir: PathBuf) -> Self {
         println!("🛡️ Initializing AdBlock Engine...");
-        
+
         // Crear directorio de caché si no existe
         if !cache_dir.exists() {
             fs::create_dir_all(&cache_dir).ok();
         }
 
         let mut filter_set = FilterSet::new(false);
-        
+
         // Cargar listas de filtros
-        let easylist = Self::load_filter_list(
-            &cache_dir,
-            "easylist.txt",
-            EASYLIST_URL
-        );
-        
-        let easyprivacy = Self::load_filter_list(
-            &cache_dir,
-            "easyprivacy.txt",
-            EASYPRIVACY_URL
-        );
+        let easylist = Self::load_filter_list(&cache_dir, "easylist.txt", EASYLIST_URL);
+
+        let easyprivacy = Self::load_filter_list(&cache_dir, "easyprivacy.txt", EASYPRIVACY_URL);
 
         // Agregar filtros básicos manuales
         let manual_filters = vec![
@@ -51,11 +43,9 @@ impl AdBlockEngine {
             "||google-analytics.com^",
             "||googletagmanager.com^",
             "||googletagservices.com^",
-            
             // Facebook tracking
             "||facebook.com/tr^",
             "||connect.facebook.net^",
-            
             // Patrones comunes
             "*/ads.js",
             "*/advertising.js",
@@ -83,14 +73,20 @@ impl AdBlockEngine {
 
         // Agregar filtros manuales
         for filter in manual_filters {
-            if filter_set.add_filter(filter, FilterFormat::Standard).is_ok() {
+            if filter_set
+                .add_filter(filter, FilterFormat::Standard)
+                .is_ok()
+            {
                 total_filters += 1;
             }
         }
 
         let engine = Engine::from_filter_set(filter_set, true);
-        
-        println!("✅ AdBlock Engine initialized with {} total filters", total_filters);
+
+        println!(
+            "✅ AdBlock Engine initialized with {} total filters",
+            total_filters
+        );
 
         Self {
             engine: Arc::new(Mutex::new(engine)),
@@ -100,7 +96,7 @@ impl AdBlockEngine {
 
     fn load_filter_list(cache_dir: &PathBuf, filename: &str, url: &str) -> Option<String> {
         let cache_path = cache_dir.join(filename);
-        
+
         // Verificar si existe caché y si está actualizado
         if cache_path.exists() {
             if let Ok(metadata) = fs::metadata(&cache_path) {
@@ -108,7 +104,7 @@ impl AdBlockEngine {
                     let age = SystemTime::now()
                         .duration_since(modified)
                         .unwrap_or(Duration::from_secs(0));
-                    
+
                     // Si el caché tiene menos de CACHE_DURATION_DAYS días, usarlo
                     if age < Duration::from_secs(CACHE_DURATION_DAYS * 24 * 60 * 60) {
                         println!("📦 Using cached {}", filename);
@@ -137,7 +133,7 @@ impl AdBlockEngine {
             }
             Err(e) => {
                 eprintln!("❌ Failed to download {}: {}", filename, e);
-                
+
                 // Intentar usar caché antiguo como fallback
                 if cache_path.exists() {
                     println!("🔙 Using old cache for {}", filename);
@@ -151,7 +147,7 @@ impl AdBlockEngine {
 
     fn download_filter_list(url: &str) -> Result<String, Box<dyn std::error::Error>> {
         use std::io::Read;
-        
+
         // Crear cliente HTTP con timeout
         let client = ureq::AgentBuilder::new()
             .timeout_connect(std::time::Duration::from_secs(10))
@@ -161,46 +157,44 @@ impl AdBlockEngine {
         let response = client.get(url).call()?;
         let mut content = String::new();
         response.into_reader().read_to_string(&mut content)?;
-        
+
         Ok(content)
     }
 
     fn add_filters_from_content(filter_set: &mut FilterSet, content: &str) -> usize {
         let mut count = 0;
-        
+
         for line in content.lines() {
             let line = line.trim();
-            
+
             // Ignorar comentarios y líneas vacías
             if line.is_empty() || line.starts_with('!') || line.starts_with('[') {
                 continue;
             }
-            
+
             // Agregar filtro
             if filter_set.add_filter(line, FilterFormat::Standard).is_ok() {
                 count += 1;
             }
         }
-        
+
         count
     }
 
     fn should_block(&self, url: &str, source_url: &str, request_type: &str) -> bool {
         let engine = self.engine.lock().unwrap();
-        
+
         // Crear la request para el engine
-        let request = Request::new(
-            url,
-            source_url,
-            request_type,
-        ).unwrap_or_else(|_| {
-            Request::new(url, "", "other").unwrap()
-        });
+        let request = Request::new(url, source_url, request_type)
+            .unwrap_or_else(|_| Request::new(url, "", "other").unwrap());
 
         let result = engine.check_network_request(&request);
-        
+
         if result.matched {
-            println!("🚫 Blocked: {} (type: {}, source: {})", url, request_type, source_url);
+            println!(
+                "🚫 Blocked: {} (type: {}, source: {})",
+                url, request_type, source_url
+            );
             true
         } else {
             false
@@ -228,7 +222,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
         })
         .on_webview_ready(|window| {
             println!("🌐 WebView ready, injecting AdBlock interceptor...");
-            
+
             // Inyectar script que reporta las peticiones a Rust
             let script = r#"
             (function() {

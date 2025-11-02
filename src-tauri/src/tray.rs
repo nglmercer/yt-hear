@@ -1,4 +1,8 @@
-use tauri::{AppHandle, Manager, menu::{Menu, MenuItem, PredefinedMenuItem}, tray::{TrayIconBuilder, TrayIconEvent, MouseButton}};
+use tauri::{
+    menu::{Menu, MenuItem, PredefinedMenuItem},
+    tray::{MouseButton, TrayIconBuilder, TrayIconEvent},
+    AppHandle, Manager,
+};
 
 pub fn create_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     // Create menu items with IDs for proper event handling
@@ -9,25 +13,33 @@ pub fn create_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error
     let about = MenuItem::with_id(app, "about", "About", true, None::<String>)?;
     let separator2 = PredefinedMenuItem::separator(app)?;
     let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<String>)?;
-    
-    let menu = Menu::with_items(app, &[&show, &hide, &separator1, &settings, &about, &separator2, &quit])?;
-        
+
+    let menu = Menu::with_items(
+        app,
+        &[
+            &show,
+            &hide,
+            &separator1,
+            &settings,
+            &about,
+            &separator2,
+            &quit,
+        ],
+    )?;
+
     let _tray = TrayIconBuilder::new()
         .menu(&menu)
         .tooltip("Tatar - YouTube Music")
         .show_menu_on_left_click(false)
         .icon(app.default_window_icon().unwrap().clone())
         .build(app)?;
-        
+
     Ok(())
 }
 
 pub fn handle_tray_event(app: &AppHandle, event: TrayIconEvent) {
     match event {
-        TrayIconEvent::Click {
-            button,
-            ..
-        } => {
+        TrayIconEvent::Click { button, .. } => {
             // Left click - toggle window visibility
             if button == MouseButton::Left {
                 let window = app.get_webview_window("main").unwrap();
@@ -39,10 +51,7 @@ pub fn handle_tray_event(app: &AppHandle, event: TrayIconEvent) {
                 }
             }
         }
-        TrayIconEvent::DoubleClick {
-            button,
-            ..
-        } => {
+        TrayIconEvent::DoubleClick { button, .. } => {
             // Double click - show and focus window
             if button == MouseButton::Left {
                 let window = app.get_webview_window("main").unwrap();
@@ -82,7 +91,7 @@ pub fn handle_menu_event(app: &AppHandle, event: tauri::menu::MenuEvent) {
                     let _ = tauri::WebviewWindowBuilder::new(
                         app,
                         "settings",
-                        tauri::WebviewUrl::App("/settings".into())
+                        tauri::WebviewUrl::App("/settings".into()),
                     )
                     .title("Settings")
                     .inner_size(800.0, 600.0)

@@ -3,9 +3,9 @@
     windows_subsystem = "windows"
 )]
 
+mod adblock_plugin;
 mod tray;
 mod window;
-mod adblock_plugin;
 
 use tauri::Manager;
 
@@ -25,12 +25,12 @@ fn main() {
                     window.open_devtools();
                 }
             }
-            
+
             // System tray
             if let Err(e) = tray::create_tray(app) {
                 eprintln!("⚠️ Failed to create system tray: {}", e);
             }
-            
+
             Ok(())
         })
         .on_window_event(|window, event| {
