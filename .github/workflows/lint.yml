@@ -46,10 +46,16 @@ jobs:
       working-directory: ./src-tauri
       run: cargo fmt --all -- --check
       
-    - name: Install system dependencies for Clippy
+    - name: Install minimal dependencies for Clippy
       run: |
         sudo apt-get update
-        sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libglib2.0-dev pkg-config
+        sudo apt-get install -y --no-install-recommends \
+          libgtk-3-dev \
+          libwebkit2gtk-4.1-dev \
+          libayatana-appindicator3-dev \
+          librsvg2-dev \
+          patchelf \
+          pkg-config
       
     - name: Run Rust linter
       working-directory: ./src-tauri
