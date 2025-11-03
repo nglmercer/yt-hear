@@ -8,7 +8,6 @@
     window.__ADBLOCK_INJECTED__ = true;  
     console.log('🛡️ AdBlock: Starting injection into', window.location.href);  
       
-    // ========== CONFIGURACIÓN ==========
     const CONFIG = {
         CACHE_TTL: 86400000,
         MAX_CACHE_SIZE: 1000,
@@ -20,16 +19,13 @@
         ENGINE_MAX_ATTEMPTS: 50,
         ENGINE_RETRY_DELAY: 200,
         BATCH_SIZE: 50,
-        // YouTube específico
         YOUTUBE_CHECK_INTERVAL: 500,
         YOUTUBE_SKIP_DELAY: 100,
     };
 
     const WHITELIST = [];  
     
-    // ========== PATRONES DE ANUNCIOS DE YOUTUBE ==========
     const YOUTUBE_AD_PATTERNS = {
-        // Solo bloqueamos dominios externos de tracking
         domains: [
             'doubleclick.net',
             'googleadservices.com',
@@ -47,7 +43,6 @@
         ]
     };
       
-    // ========== ESTADO GLOBAL ==========
     const nativeFetch = window.fetch;  
     const nativeXHR = window.XMLHttpRequest;  
     
@@ -66,7 +61,6 @@
     let debounceTimer = null;
     let youtubeAdSkipper = null;
     
-    // Estadísticas
     const stats = {
         networkBlocked: 0,
         cosmeticBlocked: 0,
@@ -74,7 +68,6 @@
         youtubeTrackingBlocked: 0
     };
       
-    // ========== UTILIDADES ==========
     function isWhitelisted(url) {  
         return WHITELIST.some(domain => url.includes(domain));  
     }
@@ -94,7 +87,6 @@
                isWhitelisted(url);
     }
     
-    // ========== DETECCIÓN DE TRACKING DE YOUTUBE (NO ANUNCIOS DE VIDEO) ==========
     function isYouTubeTracking(url) {
         if (!url) return false;
         
@@ -103,7 +95,6 @@
             const hostname = urlObj.hostname;
             const pathname = urlObj.pathname;
             
-            // Solo bloqueamos tracking externo, NO los anuncios de video
             for (const domain of YOUTUBE_AD_PATTERNS.domains) {
                 if (hostname.includes(domain)) {
                     console.log('🛡️ AdBlock: [TRACKING] Blocked:', hostname);
@@ -112,7 +103,6 @@
                 }
             }
             
-            // Bloquear solo analytics y tracking, NO video ads
             if (pathname.includes('/pagead/') || pathname.includes('/pcs/click')) {
                 console.log('🛡️ AdBlock: [TRACKING] Blocked path:', pathname);
                 stats.youtubeTrackingBlocked++;
@@ -140,7 +130,6 @@
 
     window.addEventListener('beforeunload', cleanup);
       
-    // ========== INICIALIZACIÓN ==========
     async function init() {  
         console.log('🛡️ AdBlock: [INIT] Starting initialization...');  
           
@@ -183,7 +172,6 @@
         await applyCosmeticFilters();
         startBackgroundTasks();
         
-        // Inyectar skipper de anuncios de YouTube
         if (window.location.hostname.includes('youtube.com')) {
             injectYouTubeAdSkipper();
         }
@@ -192,11 +180,9 @@
         return true;  
     }
 
-    // ========== SKIPPER DE ANUNCIOS DE YOUTUBE ==========
     function injectYouTubeAdSkipper() {
         console.log('🛡️ AdBlock: [YOUTUBE] Injecting ad skipper...');
         
-        // Inyectar estilos para ocultar anuncios visualmente
         const style = document.createElement('style');
         style.textContent = `
             /* Ocultar overlay de anuncios pero mantener funcionalidad */
@@ -227,10 +213,8 @@
         `;
         (document.head || document.documentElement).appendChild(style);
         
-        // Función para saltar anuncios
         function skipAd() {
             try {
-                // Método 1: Buscar botón de skip
                 const skipButton = document.querySelector('.ytp-ad-skip-button, .ytp-ad-skip-button-modern, .ytp-skip-ad-button');
                 if (skipButton && skipButton.offsetParent !== null) {
                     console.log('🛡️ AdBlock: [YOUTUBE] Clicking skip button');
@@ -239,15 +223,12 @@
                     return true;
                 }
                 
-                // Método 2: Adelantar el video al final del anuncio
                 const video = document.querySelector('video.html5-main-video');
                 if (video) {
                     const isAd = document.querySelector('.ad-showing, .ytp-ad-player-overlay');
                     if (isAd) {
-                        // Acelerar el anuncio al máximo
                         video.playbackRate = 16;
                         
-                        // Si es posible, saltar al final
                         if (video.duration && isFinite(video.duration) && video.duration > 0) {
                             video.currentTime = video.duration - 0.1;
                             console.log('🛡️ AdBlock: [YOUTUBE] Skipped to end of ad');
@@ -255,14 +236,12 @@
                             return true;
                         }
                     } else {
-                        // Restaurar velocidad normal si no es anuncio
                         if (video.playbackRate !== 1) {
                             video.playbackRate = 1;
                         }
                     }
                 }
                 
-                // Método 3: Cerrar banners de anuncios
                 const closeButtons = document.querySelectorAll('.ytp-ad-overlay-close-button, button[aria-label*="Close ad"]');
                 closeButtons.forEach(btn => {
                     if (btn.offsetParent !== null) {
@@ -277,17 +256,14 @@
             return false;
         }
         
-        // Ejecutar el skipper periódicamente
         youtubeAdSkipper = setInterval(() => {
             skipAd();
         }, CONFIG.YOUTUBE_CHECK_INTERVAL);
         
-        // También ejecutar en eventos importantes
         document.addEventListener('yt-navigate-finish', () => {
             setTimeout(skipAd, CONFIG.YOUTUBE_SKIP_DELAY);
         });
         
-        // Observar cambios en el player
         const playerObserver = new MutationObserver(() => {
             const isAd = document.querySelector('.ad-showing, .ytp-ad-player-overlay');
             if (isAd) {
@@ -309,11 +285,9 @@
             }
         }, 1000);
         
-        // Limpiar después de 10 segundos si no encuentra el player
         setTimeout(() => clearInterval(checkPlayer), 10000);
     }
 
-    // ========== FILTROS COSMÉTICOS ==========
     async function applyCosmeticFilters() {  
         if (!adblockReady || !invoke) {  
             console.log('🛡️ AdBlock: [COSMETIC] Skipping - engine not ready');  
@@ -369,7 +343,6 @@
         }  
     }  
       
-    // ========== FILTROS PROCEDURALES ==========
     function applyProceduralActions(actions) {  
         let applied = 0;
         
@@ -430,7 +403,6 @@
         return false;
     }  
       
-    // ========== OCULTACIÓN DINÁMICA ==========
     async function applyDynamicHiding() {  
         if (!adblockReady || !invoke || !currentResources || currentResources.generichide) {
             return;  
@@ -481,13 +453,11 @@
         }  
     }  
       
-    // ========== VERIFICACIÓN DE URLs ==========
     async function checkUrl(url, type) {  
         if (!adblockReady || isSafeUrl(url)) {  
             return false;  
         }
         
-        // Verificar solo tracking, NO bloquear videos de anuncios
         if (isYouTubeTracking(url)) {
             return true;
         }
@@ -560,7 +530,6 @@
         }
     }
       
-    // ========== INTERCEPTACIÓN DE FETCH ==========
     window.fetch = async function(...args) {  
         const url = args[0];  
         const urlStr = typeof url === 'string' ? url : (url?.url || '');  
@@ -585,7 +554,6 @@
         return nativeFetch.apply(this, args);  
     };  
       
-    // ========== INTERCEPTACIÓN DE XMLHttpRequest ==========
     window.XMLHttpRequest = function() {  
         const xhr = new nativeXHR();  
         const originalOpen = xhr.open;  
@@ -628,7 +596,6 @@
         return xhr;  
     };  
       
-    // ========== OBSERVADOR DE MUTACIONES ==========
     const observer = new MutationObserver(mutations => {  
         if (!adblockReady) return;  
           
@@ -692,7 +659,6 @@
         attributeFilter: ['class', 'id', 'src', 'href', 'data']  
     });  
       
-    // ========== TAREAS EN SEGUNDO PLANO ==========
     function startBackgroundTasks() {
         cleanupInterval = setInterval(() => {
             cleanupCache();
@@ -719,7 +685,6 @@
         }, CONFIG.DYNAMIC_SCAN_DEBOUNCE);  
     }
       
-    // ========== EVENTOS ==========
     window.addEventListener('load', () => {  
         console.log('🛡️ AdBlock: [EVENT] Page loaded, re-applying cosmetic filters');  
         applyCosmeticFilters().then(() => {  
@@ -749,7 +714,6 @@
         }
     }).observe(document, { subtree: true, childList: true });
       
-    // ========== INICIO ==========
     init().then(success => {  
         if (success) {  
             console.log('🛡️ AdBlock: ✅ Fully operational');  
