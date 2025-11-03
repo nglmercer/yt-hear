@@ -5,21 +5,12 @@ use tauri::{
 };
 
 pub fn create_tray(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> {
-    // Create menu items with IDs for proper event handling
     let show = MenuItem::with_id(app, "show", "Show", true, None::<String>)?;
     let hide = MenuItem::with_id(app, "hide", "Hide", true, None::<String>)?;
     let separator1 = PredefinedMenuItem::separator(app)?;
     let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<String>)?;
 
-    let menu = Menu::with_items(
-        app,
-        &[
-            &show,
-            &hide,
-            &separator1,
-            &quit,
-        ],
-    )?;
++   let menu = Menu::with_items(app, &[&show, &hide, &separator1, &quit])?;
 
     let _tray = TrayIconBuilder::new()
         .menu(&menu)
