@@ -23,7 +23,6 @@ const FILTER_LISTS: &[(&str, &str)] = &[
 
 const WHITELIST_DOMAINS: &[&str] = &[];
 
-// ✅ Eliminado el campo cosmetic_filters innecesario
 #[derive(Clone)]
 pub struct AdBlockState {
     engine: Arc<Mutex<Option<Engine>>>,
@@ -75,7 +74,6 @@ impl AdBlockState {
         WHITELIST_DOMAINS.iter().any(|domain| url.contains(domain))
     }
 
-    // ✅ Ahora acepta URL completa en lugar de hostname
     fn get_cosmetic_resources(&self, url: &str) -> serde_json::Value {
         use adblock::cosmetic_filter_cache::UrlSpecificResources;
 
@@ -198,7 +196,6 @@ async fn setup_filters(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>
         ParseOptions::default(),
     );
 
-    // ✅ Manejo correcto de errores en serialización
     if let Err(e) = save_engine_to_cache(&engine, &engine_cache_path) {
         eprintln!("⚠️ Could not save engine cache: {}", e);
     } else {
@@ -309,7 +306,6 @@ pub async fn is_adblock_ready(state: tauri::State<'_, AdBlockState>) -> Result<b
     Ok(state.is_ready())
 }
 
-// ✅ Ahora acepta URL completa
 #[tauri::command]
 pub async fn get_cosmetic_resources(
     url: String,
@@ -318,7 +314,6 @@ pub async fn get_cosmetic_resources(
     Ok(state.get_cosmetic_resources(&url))
 }
 
-// ✅ Ahora recibe exceptions desde el frontend
 #[tauri::command]
 pub async fn get_hidden_class_id_selectors(
     classes: Vec<String>,
