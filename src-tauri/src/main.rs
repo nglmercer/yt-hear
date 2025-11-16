@@ -1,3 +1,4 @@
+// src-tauri/src/main.rs
 #![cfg_attr(
     all(not(debug_assertions), target_os = "windows"),
     windows_subsystem = "windows"
@@ -7,81 +8,84 @@ mod adblock_plugin;
 mod tray;
 mod window;
 
-use tauri::Manager;
+use tauri::{AppHandle, Manager};
 
 const ADBLOCK_INIT_SCRIPT: &str = include_str!("adblock.js");
+const MAIN_WINDOW_LABEL: &str = "main";
 
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(adblock_plugin::init())
         .invoke_handler(tauri::generate_handler![
-            minimize_window,
-            toggle_maximize,
-            close_window,
-            adblock_plugin::is_url_blocked,
-            adblock_plugin::is_adblock_ready,
-            adblock_plugin::get_hidden_class_id_selectors,
-            adblock_plugin::check_batch_urls,
-            adblock_plugin::get_cosmetic_resources,
+            window_commands::minimize,
+            window_commands::toggle_maximize,
+            window_commands::close,
         ])
         .setup(|app| {
-            // Inject AdBlock script into main window
-            if let Some(window) = app.get_webview_window("main") {
-                #[cfg(debug_assertions)]
-                {
-                    window.open_devtools();
-                }
-            }
-
-            // System tray
-            if let Err(e) = tray::create_tray(app.handle()) {
-                eprintln!("⚠️ Error creating system tray: {}", e);
-            }
-
+            setup_main_window(app)?;
+            setup_tray(&app.handle())?;
             Ok(())
         })
-        .on_page_load(|window, _event| {
-            let _ = window.eval(ADBLOCK_INIT_SCRIPT);
+        .on_page_load(|window, _| {
+            if window.label() == MAIN_WINDOW_LABEL {
+                let _ = window.eval(ADBLOCK_INIT_SCRIPT);
+            }
         })
         .on_window_event(|window, event| {
             window::handle_window_event(window, event);
         })
-        .on_menu_event(|app, event| {
-            tray::handle_menu_event(app, event);
-        })
-        .on_tray_icon_event(|app, event| {
-            tray::handle_tray_event(app, event);
-        })
+        .on_menu_event(tray::handle_menu_event)
+        .on_tray_icon_event(tray::handle_tray_event)
         .build(tauri::generate_context!())
-        .expect("Error al ejecutar la aplicación Tauri")
+        .expect("Failed to build Tauri application")
         .run(|app_handle, event| {
             window::handle_run_event(app_handle, &event);
         });
 }
 
-#[tauri::command]
-fn minimize_window(window: tauri::Window) {
-    let _ = window.minimize();
-}
-
-#[tauri::command]
-fn toggle_maximize(window: tauri::Window) {
-    if window.is_maximized().unwrap_or(false) {
-        let _ = window.unmaximize();
-    } else {
-        let _ = window.maximize();
+fn setup_main_window(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
+    if let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL) {
+        #[cfg(debug_assertions)]
+        window.open_devtools();
     }
+    Ok(())
 }
 
-#[tauri::command]
-fn close_window(window: tauri::Window) {
-    let _ = window.close();
+fn setup_tray(handle: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
+    tray::create_tray(handle).map_err(|e| {
+        eprintln!("⚠️ Tray error: {}", e);
+        e
+    })
 }
 
-pub fn cleanup_and_exit(_app: &tauri::AppHandle) {
+pub fn cleanup_and_exit(_app: &AppHandle) {
     std::thread::spawn(|| {
         std::thread::sleep(std::time::Duration::from_millis(100));
         std::process::exit(0);
     });
+}
+
+mod window_commands {
+    use tauri::Window;
+
+    #[tauri::command]
+    pub fn minimize(window: Window) -> Result<(), String> {
+        window.minimize().map_err(|e| e.to_string())
+    }
+
+    #[tauri::command]
+    pub fn toggle_maximize(window: Window) -> Result<(), String> {
+        let is_max = window.is_maximized().map_err(|e| e.to_string())?;
+        if is_max {
+            window.unmaximize().map_err(|e| e.to_string())
+        } else {
+            window.maximize().map_err(|e| e.to_string())
+        }
+    }
+
+    #[tauri::command]
+    pub fn close(window: Window) -> Result<(), String> {
+        window.close().map_err(|e| e.to_string())
+    }
 }
