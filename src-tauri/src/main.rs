@@ -9,7 +9,8 @@ mod bridge;
 mod tray;
 mod window;
 mod scripts;
-
+mod http_server;
+use std::sync::Arc; 
 use scripts::ScriptId;
 use tauri::{AppHandle, Manager};
 
@@ -21,16 +22,18 @@ fn debug_get_current_state(state: tauri::State<'_, bridge::AppState>) -> serde_j
     state.get_full_snapshot()
 }
 fn main() {
+    let app_state = Arc::new(bridge::AppState::default());
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(adblock_plugin::init())
-        .manage(bridge::AppState::default()) 
+        .manage(app_state.clone()) 
         .invoke_handler(tauri::generate_handler![
             window_commands::minimize,
             window_commands::toggle_maximize,
             window_commands::close,
             bridge::push_telemetry,
             debug_get_current_state,
+            cmd_toggle_server,
         ])
         .setup(|app| {
             setup_main_window(app)?;
@@ -112,5 +115,22 @@ mod window_commands {
     #[tauri::command]
     pub fn close(window: Window) -> Result<(), String> {
         window.close().map_err(|e| e.to_string())
+    }
+}
+#[tauri::command]
+async fn cmd_toggle_server(
+    state: tauri::State<'_, Arc<bridge::AppState>>,
+    port: Option<u16>
+) -> Result<String, String> {
+    let is_running = state.http_server_shutdown.lock().unwrap().is_some();
+
+    if is_running {
+        http_server::stop_server(&state)
+    } else {
+        if let Some(p) = port {
+            http_server::start_server(p, state.inner().clone()).await
+        } else {
+            Err("Server stopped (no valid port provided).".to_string())
+        }
     }
 }
