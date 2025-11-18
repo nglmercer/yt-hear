@@ -5,22 +5,32 @@
 )]
 
 mod adblock_plugin;
+mod bridge;
 mod tray;
 mod window;
+mod scripts;
 
+use scripts::ScriptId;
 use tauri::{AppHandle, Manager};
 
-const ADBLOCK_INIT_SCRIPT: &str = include_str!("adblock.js");
 const MAIN_WINDOW_LABEL: &str = "main";
 
+#[tauri::command]
+fn debug_get_current_state(state: tauri::State<'_, bridge::AppState>) -> serde_json::Value {
+    println!("🦀 Rust API: Reading state snapshot...");
+    state.get_full_snapshot()
+}
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(adblock_plugin::init())
+        .manage(bridge::AppState::default()) 
         .invoke_handler(tauri::generate_handler![
             window_commands::minimize,
             window_commands::toggle_maximize,
             window_commands::close,
+            bridge::push_telemetry,
+            debug_get_current_state,
         ])
         .setup(|app| {
             setup_main_window(app)?;
@@ -29,7 +39,12 @@ fn main() {
         })
         .on_page_load(|window, _| {
             if window.label() == MAIN_WINDOW_LABEL {
-                let _ = window.eval(ADBLOCK_INIT_SCRIPT);
+                println!("💉 Injecting Scripts...");
+                for script_id in ScriptId::ALL_IN_ORDER {
+                    if let Err(e) = window.eval(script_id.content()) {
+                        eprintln!("❌ Script Error [{:?}]: {}", script_id, e);
+                    }
+                }
             }
         })
         .on_window_event(|window, event| {
@@ -42,6 +57,16 @@ fn main() {
         .run(|app_handle, event| {
             window::handle_run_event(app_handle, &event);
         });
+    std::panic::set_hook(Box::new(|info| {
+        let msg = info.payload().downcast_ref::<&str>().unwrap_or(&"Unknown panic");
+        let location = info.location().map(|l| l.to_string()).unwrap_or_default();
+        eprintln!("🔥 CRITICAL RUST PANIC: {} at {}", msg, location);
+        // Opcional: Escribir a un archivo de texto panic.log
+        use std::io::Write;
+        if let Ok(mut file) = std::fs::File::create("panic-crash.log") {
+            let _ = writeln!(file, "Panic: {} at {}", msg, location);
+        }
+    }));
 }
 
 fn setup_main_window(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {

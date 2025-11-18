@@ -1,0 +1,26 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "plugin",
+  "description": "Permissions for remote URLs to access Tauri API",
+  "windows": ["main"],
+  "remote": {
+    "urls": [
+      "https://music.youtube.com/*",
+      "https://*.youtube.com/*",
+      "https://*.google.com/*",
+      "https://*.googlevideo.com/*"
+    ]
+  },
+  "permissions": [
+    "core:default",
+    "core:window:default",
+    "core:webview:default",
+    "core:event:default",
+    "core:app:default"
+  ],
+  "command": {
+    "allow": [
+      "push_telemetry"
+    ]
+  }
+}
