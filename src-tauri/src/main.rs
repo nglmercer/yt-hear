@@ -6,12 +6,12 @@
 
 mod adblock_plugin;
 mod bridge;
+mod http_server;
+mod scripts;
 mod tray;
 mod window;
-mod scripts;
-mod http_server;
-use std::sync::Arc; 
 use scripts::ScriptId;
+use std::sync::Arc;
 use tauri::{AppHandle, Manager};
 
 const MAIN_WINDOW_LABEL: &str = "main";
@@ -26,7 +26,7 @@ fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(adblock_plugin::init())
-        .manage(app_state.clone()) 
+        .manage(app_state.clone())
         .invoke_handler(tauri::generate_handler![
             window_commands::minimize,
             window_commands::toggle_maximize,
@@ -40,7 +40,7 @@ fn main() {
             let state = handle.state::<Arc<bridge::AppState>>();
             *state.app_handle.lock().unwrap() = Some(handle.clone());
 
-            setup_main_window(app)?;    
+            setup_main_window(app)?;
             setup_tray(app.handle())?;
             Ok(())
         })
@@ -65,7 +65,10 @@ fn main() {
             window::handle_run_event(app_handle, &event);
         });
     std::panic::set_hook(Box::new(|info| {
-        let msg = info.payload().downcast_ref::<&str>().unwrap_or(&"Unknown panic");
+        let msg = info
+            .payload()
+            .downcast_ref::<&str>()
+            .unwrap_or(&"Unknown panic");
         let location = info.location().map(|l| l.to_string()).unwrap_or_default();
         eprintln!("🔥 CRITICAL RUST PANIC: {} at {}", msg, location);
         // Opcional: Escribir a un archivo de texto panic.log
@@ -124,7 +127,7 @@ mod window_commands {
 #[tauri::command]
 async fn cmd_toggle_server(
     state: tauri::State<'_, Arc<bridge::AppState>>,
-    port: Option<u16>
+    port: Option<u16>,
 ) -> Result<String, String> {
     let is_running = state.http_server_shutdown.lock().unwrap().is_some();
 

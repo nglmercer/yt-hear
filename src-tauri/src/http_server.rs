@@ -17,10 +17,9 @@ async fn get_song(State(state): State<Arc<AppState>>) -> Json<serde_json::Value>
     Json(state.get_song_info())
 }
 async fn send_player_command(
-    State(state): State<Arc<AppState>>, 
-    Json(cmd): Json<serde_json::Value> 
+    State(state): State<Arc<AppState>>,
+    Json(cmd): Json<serde_json::Value>,
 ) -> Json<serde_json::Value> {
-    
     state.emit_to_frontend("ytm:command", cmd);
 
     Json(serde_json::json!({ "status": "ok", "message": "Command sent" }))
@@ -31,7 +30,7 @@ pub async fn start_server(port: u16, app_state: Arc<AppState>) -> Result<String,
         if shutdown_guard.is_some() {
             return Err("Server is already running".to_string());
         }
-    } 
+    }
     let app = Router::new()
         .route("/", get(get_full_state))
         .route("/song", get(get_song))
@@ -42,15 +41,16 @@ pub async fn start_server(port: u16, app_state: Arc<AppState>) -> Result<String,
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
 
     println!("🚀 Starting HTTP Server on http://{}", addr);
-    
-    let listener = tokio::net::TcpListener::bind(addr).await
+
+    let listener = tokio::net::TcpListener::bind(addr)
+        .await
         .map_err(|e| format!("Failed to bind port {}: {}", port, e))?;
 
     let (tx, rx) = oneshot::channel();
     {
         let mut shutdown_guard = app_state.http_server_shutdown.lock().unwrap();
         if shutdown_guard.is_some() {
-             return Err("Server started by another process concurrently".to_string());
+            return Err("Server started by another process concurrently".to_string());
         }
         *shutdown_guard = Some(tx);
     }
@@ -72,7 +72,7 @@ pub async fn start_server(port: u16, app_state: Arc<AppState>) -> Result<String,
 
 pub fn stop_server(app_state: &AppState) -> Result<String, String> {
     let mut shutdown_guard = app_state.http_server_shutdown.lock().unwrap();
-    
+
     if let Some(tx) = shutdown_guard.take() {
         let _ = tx.send(());
         Ok("Server stopping...".to_string())

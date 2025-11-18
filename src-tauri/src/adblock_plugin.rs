@@ -5,7 +5,10 @@ use std::fs;
 use std::path::Path;
 use std::sync::{Arc, RwLock};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use tauri::{plugin::{Builder, TauriPlugin}, AppHandle, Manager};
+use tauri::{
+    plugin::{Builder, TauriPlugin},
+    AppHandle, Manager,
+};
 
 const FILTER_LISTS: &[(&str, &str)] = &[
     ("uBlock filters", "https://raw.githubusercontent.com/uBlockOrigin/uAssets/master/filters/filters.txt"),
@@ -69,7 +72,6 @@ impl AdBlockState {
 
     fn get_cosmetic_resources(&self, url: &str) -> serde_json::Value {
         use adblock::cosmetic_filter_cache::UrlSpecificResources;
-        
         let engine_guard = self.engine.read().unwrap();
         let resources = engine_guard
             .as_ref()
@@ -118,7 +120,6 @@ pub fn init() -> TauriPlugin<tauri::Wry> {
 async fn setup_filters(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     let cache_dir = app.path().app_data_dir()?.join("adblock_cache");
     fs::create_dir_all(&cache_dir)?;
-    
     let engine_cache_path = cache_dir.join(ENGINE_CACHE_FILE);
 
     if let Ok(engine) = load_engine_from_cache(&engine_cache_path, CACHE_DURATION_SECS) {
@@ -129,7 +130,9 @@ async fn setup_filters(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>
 
     let filters = fetch_all_filters(&cache_dir).await?;
     let engine = Engine::from_rules(
-        filters.lines().filter(|l| !l.is_empty() && !l.starts_with('!')),
+        filters
+            .lines()
+            .filter(|l| !l.is_empty() && !l.starts_with('!')),
         ParseOptions::default(),
     );
 
@@ -145,11 +148,10 @@ async fn setup_filters(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>
 
 async fn fetch_all_filters(cache_dir: &Path) -> Result<String, Box<dyn std::error::Error>> {
     let mut all_content = String::new();
-    
     for (name, url) in FILTER_LISTS {
         let filename = sanitize_filename(name);
         let cache_path = cache_dir.join(&filename);
-        
+
         let content = if is_cache_valid(&cache_path, CACHE_DURATION_SECS) {
             fs::read_to_string(&cache_path).unwrap_or_default()
         } else {
@@ -161,21 +163,16 @@ async fn fetch_all_filters(cache_dir: &Path) -> Result<String, Box<dyn std::erro
                 }
             }
         };
-        
+
         all_content.push_str(&content);
         all_content.push('\n');
     }
-    
     Ok(all_content)
 }
 
 async fn download_list(url: &str, cache_path: &Path) -> Result<String, Box<dyn std::error::Error>> {
-    let response = ureq::get(url)
-        .timeout(Duration::from_secs(30))
-        .call()?;
-
+    let response = ureq::get(url).timeout(Duration::from_secs(30)).call()?;
     let content = response.into_string()?;
-    
     if content.len() > MAX_DOWNLOAD_SIZE {
         return Err("Content too large".into());
     }
@@ -188,31 +185,44 @@ fn is_cache_valid(path: &Path, max_age_secs: u64) -> bool {
     fs::metadata(path)
         .and_then(|m| m.modified())
         .map(|modified| {
-            let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+            let now = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs();
             let cache_time = modified.duration_since(UNIX_EPOCH).unwrap().as_secs();
             now.saturating_sub(cache_time) < max_age_secs
         })
         .unwrap_or(false)
 }
 
-fn save_engine_to_cache(engine: &Engine, cache_path: &Path) -> Result<(), Box<dyn std::error::Error>> {
+fn save_engine_to_cache(
+    engine: &Engine,
+    cache_path: &Path,
+) -> Result<(), Box<dyn std::error::Error>> {
     fs::write(cache_path, engine.serialize())?;
     Ok(())
 }
 
-fn load_engine_from_cache(path: &Path, max_age_secs: u64) -> Result<Engine, Box<dyn std::error::Error>> {
+fn load_engine_from_cache(
+    path: &Path,
+    max_age_secs: u64,
+) -> Result<Engine, Box<dyn std::error::Error>> {
     if !is_cache_valid(path, max_age_secs) {
         return Err("Cache invalid".into());
     }
 
     let data = fs::read(path)?;
     let mut engine = Engine::default();
-    engine.deserialize(&data).map_err(|e| format!("Deserialize: {:?}", e))?;
+    engine
+        .deserialize(&data)
+        .map_err(|e| format!("Deserialize: {:?}", e))?;
     Ok(engine)
 }
 
 fn sanitize_filename(name: &str) -> String {
-    name.replace(&[' ', '-', '\''][..], "_").replace(|c: char| !c.is_alphanumeric() && c != '_', "") + ".txt"
+    name.replace(&[' ', '-', '\''][..], "_")
+        .replace(|c: char| !c.is_alphanumeric() && c != '_', "")
+        + ".txt"
 }
 
 #[tauri::command]
@@ -220,7 +230,10 @@ pub async fn check_batch_urls(
     urls: Vec<(String, String, String)>,
     state: tauri::State<'_, AdBlockState>,
 ) -> Result<Vec<bool>, String> {
-    Ok(urls.into_iter().map(|(url, src, typ)| state.check_url(&url, &src, &typ)).collect())
+    Ok(urls
+        .into_iter()
+        .map(|(url, src, typ)| state.check_url(&url, &src, &typ))
+        .collect())
 }
 
 #[tauri::command]

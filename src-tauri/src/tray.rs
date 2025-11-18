@@ -1,21 +1,27 @@
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{MouseButton, TrayIconBuilder, TrayIconEvent},
-    AppHandle, Manager, Emitter,
+    AppHandle, Emitter, Manager,
 };
 
 pub fn create_tray(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     let show = MenuItem::with_id(app, "show", "Show", true, None::<String>)?;
     let hide = MenuItem::with_id(app, "hide", "Hide", true, None::<String>)?;
     let separator1 = PredefinedMenuItem::separator(app)?;
-    
-    let toggle_api = MenuItem::with_id(app, "toggle_api", "Start/Stop API Server", true, None::<String>)?;
+    let toggle_api = MenuItem::with_id(
+        app,
+        "toggle_api",
+        "Start/Stop API Server",
+        true,
+        None::<String>,
+    )?;
     let separator2 = PredefinedMenuItem::separator(app)?;
-
     let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<String>)?;
 
-    // Añadir &toggle_api y &separator2 al array
-    let menu = Menu::with_items(app, &[&show, &hide, &separator1, &toggle_api, &separator2, &quit])?;
+    let menu = Menu::with_items(
+        app,
+        &[&show, &hide, &separator1, &toggle_api, &separator2, &quit],
+    )?;
 
     let _tray = TrayIconBuilder::new()
         .menu(&menu)
@@ -66,7 +72,6 @@ pub fn handle_menu_event(app: &AppHandle, event: tauri::menu::MenuEvent) {
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.show();
                 let _ = window.set_focus();
-                
                 println!("📡 Sending request-server-port event to JS");
                 if let Err(e) = window.emit("request-server-port", ()) {
                     eprintln!("Error emitting event: {}", e);

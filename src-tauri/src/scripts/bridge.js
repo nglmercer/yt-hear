@@ -28,3 +28,44 @@ window.addEventListener("message", (event) => {
     }
     sendTelemetry(msg.event, msg.payload);
 });
+// src-tauri/src/scripts/providers/controller.js (o el archivo correspondiente)
+
+(function() {
+    // Asegurarse de que estamos en el contexto de Tauri
+    if (window.__TAURI__) {
+        const { listen } = window.__TAURI__.event;
+        console.log("🎧 Listening for External Commands...");
+        // Escuchamos el evento que definimos en Rust ("ytm:command")
+        listen('ytm:command', (event) => {
+            const command = event.payload;
+            console.log("📨 Received Command:", command);
+
+            handleCommand(command);
+        });
+    }
+
+    function handleCommand(data) {
+        switch (data.action) {
+            case 'play':
+                window.YTM.Player.play();
+                break;
+            case 'pause':
+                window.YTM.Player.pause();
+                break;
+            case 'playPause':
+                window.YTM.Player.playPause();
+                break;
+            case 'next':
+                window.YTM.Player.next();
+                break;
+            case 'previous':
+                window.YTM.Player.previous();
+                break;
+            case 'seek':
+                // data.value en segundos
+                if (typeof data.value === 'number') window.YTM.Player.seekTo(data.value);
+                break;
+            // ... otros comandos
+        }
+    }
+})();

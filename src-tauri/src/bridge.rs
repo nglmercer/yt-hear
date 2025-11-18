@@ -1,6 +1,6 @@
-use tauri::{AppHandle, Emitter, Runtime};
 use serde_json::Value;
-use std::sync::{Mutex, Arc};
+use std::sync::{Arc, Mutex};
+use tauri::{AppHandle, Emitter, Runtime};
 use tokio::sync::oneshot;
 
 pub struct AppState {
@@ -59,10 +59,10 @@ impl AppState {
 
 #[tauri::command]
 pub fn push_telemetry<R: Runtime>(
-    app: AppHandle<R>, 
-    state: tauri::State<'_, Arc<AppState>>, 
-    topic: String, 
-    payload: Value
+    app: AppHandle<R>,
+    state: tauri::State<'_, Arc<AppState>>,
+    topic: String,
+    payload: Value,
 ) {
     match topic.as_str() {
         "song-info" => *state.last_song_info.lock().unwrap() = payload.clone(),
@@ -70,12 +70,6 @@ pub fn push_telemetry<R: Runtime>(
         "player-state" => *state.last_player_state.lock().unwrap() = payload.clone(),
         _ => println!("⚠️ Received unknown telemetry topic: {}", topic),
     }
-    
-    // Logging reducido para no saturar la consola
-    if topic == "song-info" {
-         println!("✅ Updated Song Info");
-    }
-
     let event_name = format!("ytm:{}", topic);
     if let Err(e) = app.emit(&event_name, payload) {
         println!("❌ Error emitting event {}: {}", event_name, e);
