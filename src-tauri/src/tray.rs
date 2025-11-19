@@ -25,7 +25,7 @@ pub fn create_tray(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Err
 
     let _tray = TrayIconBuilder::new()
         .menu(&menu)
-        .tooltip("Tatar - YouTube Music")
+        .tooltip("yt-hear - YouTube Music")
         .show_menu_on_left_click(false)
         .icon(app.default_window_icon().unwrap().clone())
         .build(app)?;

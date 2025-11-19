@@ -96,28 +96,28 @@ jobs:
         
         # Para Windows, buscar el ejecutable en release
         if [[ "${{ matrix.os }}" == "windows" ]]; then
-          if [[ -f "src-tauri/target/release/tatar.exe" ]]; then
-            mv src-tauri/target/release/tatar.exe src-tauri/target/release/tatar-${{ matrix.os }}-${{ matrix.arch }}-${VERSION}.exe
-          elif [[ -f "src-tauri/target/release/tatar" ]]; then
-            mv src-tauri/target/release/tatar src-tauri/target/release/tatar-${{ matrix.os }}-${{ matrix.arch }}-${VERSION}${{ matrix.ext }}
+          if [[ -f "src-tauri/target/release/yt-hear.exe" ]]; then
+            mv src-tauri/target/release/yt-hear.exe src-tauri/target/release/yt-hear-${{ matrix.os }}-${{ matrix.arch }}-${VERSION}.exe
+          elif [[ -f "src-tauri/target/release/yt-hear" ]]; then
+            mv src-tauri/target/release/yt-hear src-tauri/target/release/yt-hear-${{ matrix.os }}-${{ matrix.arch }}-${VERSION}${{ matrix.ext }}
           fi
         else
           # Para Linux y macOS
-          if [[ -f "src-tauri/target/release/tatar" ]]; then
-            mv src-tauri/target/release/tatar src-tauri/target/release/tatar-${{ matrix.os }}-${{ matrix.arch }}-${VERSION}${{ matrix.ext }}
+          if [[ -f "src-tauri/target/release/yt-hear" ]]; then
+            mv src-tauri/target/release/yt-hear src-tauri/target/release/yt-hear-${{ matrix.os }}-${{ matrix.arch }}-${VERSION}${{ matrix.ext }}
           fi
         fi
         
         # Listar archivos finales
         echo "Final artifacts:"
-        ls -la src-tauri/target/release/tatar-* || echo "No artifacts found with expected pattern"
+        ls -la src-tauri/target/release/yt-hear-* || echo "No artifacts found with expected pattern"
         
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: tatar-${{ matrix.os }}-${{ matrix.arch }}
+        name: yt-hear-${{ matrix.os }}-${{ matrix.arch }}
         path: |
-          src-tauri/target/release/tatar-${{ matrix.os }}-${{ matrix.arch }}*
+          src-tauri/target/release/yt-hear-${{ matrix.os }}-${{ matrix.arch }}*
           src-tauri/target/release/bundle/
         retention-days: 30
 
@@ -163,12 +163,12 @@ jobs:
     - name: Create Release
       uses: softprops/action-gh-release@v2
       with:
-        name: Tatar ${{ steps.release_info.outputs.version }}
+        name: yt-hear ${{ steps.release_info.outputs.version }}
         tag_name: v${{ steps.release_info.outputs.version }}
         body_path: release_notes.md
         draft: ${{ steps.release_info.outputs.is_draft }}
         prerelease: false
         files: |
-          artifacts/tatar-*-*/*
+          artifacts/yt-hear-*-*/*
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
