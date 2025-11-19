@@ -105,26 +105,23 @@ window.addEventListener("message", (event) => {
                 case 'setQueueIndex':
                     if (window.YTM.Queue) window.YTM.Queue.setIndex(cmd.value);
                     break;
-
-                // --- Search / Navigation ---
-                case 'search':
-                    if (cmd.query) {
-                        // Navegamos a la URL de búsqueda
-                        const searchUrl = `/search?q=${encodeURIComponent(cmd.query)}`;
-                        const currentUrl = window.location.pathname + window.location.search;
-                        
-                        if (currentUrl !== searchUrl) {
-                           // Usamos el router de YTM si es posible, o location.href
-                           const app = document.querySelector('ytmusic-app');
-                           if (app && app.navigate_) {
-                               app.navigate_(searchUrl);
-                           } else {
-                               window.location.href = searchUrl;
-                           }
-                        }
+                case 'moveInQueue':
+                    if (window.YTM.Queue && typeof cmd.fromIndex === 'number' && typeof cmd.toIndex === 'number') {
+                        window.YTM.Queue.moveInQueue(cmd.fromIndex, cmd.toIndex);
                     }
                     break;
 
+                case 'search':
+                    if (cmd.query) {
+                        window.YTM.Search.search(cmd.query);
+                    }
+                    break;
+                case 'toggleShuffle':
+                    window.YTM.Player.shuffle()
+                    break;
+                case 'switchRepeat':
+                    window.YTM.Player.switchRepeat()
+                    break;
                 default:
                     console.warn("⚠️ Unknown command action:", cmd.action);
             }

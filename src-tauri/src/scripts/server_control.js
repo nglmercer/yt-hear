@@ -5,7 +5,8 @@
     console.log("🔌 API Server Control loaded");
 
     window.__TAURI__.event.listen('request-server-port', async () => {
-        const portInput = prompt("To START server, enter port (e.g. 3000).\nTo STOP, leave empty and click OK.", "3000");
+        const defaultPORT = window.localStorage?.getItem("server_port") || "3000"
+        const portInput = prompt("To START server, enter port (e.g. 3000).\nTo STOP, leave empty and click OK.", defaultPORT);
         
         if (portInput !== null) { 
             let port = parseInt(portInput);
@@ -14,10 +15,10 @@
             if (!isNaN(port) && port > 0) {
                 payload = port;
             }
-
+            if (window.localStorage) window.localStorage.setItem("server_port");
             try {
                 const message = await window.__TAURI__.core.invoke('cmd_toggle_server', { port: payload });
-                alert("Server Status: " + message);
+                console.log("Server Status: " + message);
             } catch (e) {
                 alert("Error: " + e);
             }

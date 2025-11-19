@@ -17,6 +17,7 @@ pub enum ScriptId {
     YtPlayerListener,
 
     YtMusicController,
+    YtMusicSearch,
 
     // Debug
     YtDebug,
@@ -38,10 +39,11 @@ impl ScriptId {
             ScriptId::YtMusicController => include_str!("./providers/controller.js"),
             ScriptId::YtDebug => include_str!("./providers/debug.js"),
             ScriptId::ServerControl => include_str!("./server_control.js"),
+            ScriptId::YtMusicSearch => include_str!("./providers/search.js"),
         }
     }
 
-    pub const ALL_IN_ORDER: [ScriptId; 11] = [
+    pub const ALL_IN_ORDER: [ScriptId; 12] = [
         ScriptId::Logger,
         ScriptId::Adblock,
         ScriptId::TauriBridge,
@@ -53,5 +55,6 @@ impl ScriptId {
         ScriptId::YtPlayerListener,
         ScriptId::YtDebug,
         ScriptId::ServerControl,
+        ScriptId::YtMusicSearch,
     ];
 }

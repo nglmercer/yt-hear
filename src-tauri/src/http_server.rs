@@ -2,7 +2,7 @@ use crate::bridge::AppState;
 use axum::{
     extract::{Path, State},
     http::StatusCode,
-    routing::{delete, get, post},
+    routing::{delete, get, post,patch},
     Json, Router,
 };
 use serde::Deserialize;
@@ -39,9 +39,40 @@ struct QueueIndexPayload {
 struct SearchPayload {
     query: String,
 }
-
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct QueueMovePayload {
+    from_index: usize,
+    to_index: usize,
+}
 // --- HANDLERS GET ---
+async fn move_queue_item(
+    State(state): State<AppState>, 
+    Json(payload): Json<QueueMovePayload>
+) -> Json<Value> {
+    emit_cmd(
+        &state,
+        json!({ 
+            "action": "moveInQueue", 
+            "fromIndex": payload.from_index,
+            "toIndex": payload.to_index 
+        }),
+    )
+    .await;
+    Json(json!({ "status": "ok" }))
+}
 
+async fn toggle_shuffle(State(state): State<AppState>) -> Json<Value> {
+    // Necesitas implementar esto en JS también (ver paso 4)
+    emit_cmd(&state, json!({ "action": "toggleShuffle" })).await;
+    Json(json!({ "status": "ok" }))
+}
+
+async fn toggle_repeat(State(state): State<AppState>) -> Json<Value> {
+    // Necesitas implementar esto en JS también (ver paso 4)
+    emit_cmd(&state, json!({ "action": "toggleRepeat" })).await;
+    Json(json!({ "status": "ok" }))
+}
 async fn get_song(State(state): State<AppState>) -> Result<Json<Value>, (StatusCode, String)> {
     match state.request_live_data("get-song-info", 1000).await {
         Ok(data) => Ok(Json(data)),
@@ -218,11 +249,11 @@ pub async fn start_server(port: u16, app_state: Arc<AppState>) -> Result<String,
 
     let api_v1: Router<AppState> = Router::new()
         .route("/song", get(get_song))
-        // CORRECCIÓN: Se añade post(add_to_queue) aquí para usar la función
         .route("/queue", get(get_queue).post(add_to_queue))
+        .route("/queue", patch(set_queue_index))
         .route("/queue/:index", delete(remove_queue_item))
-        // CORRECCIÓN: Se añade la ruta para set_queue_index
         .route("/queue/index", post(set_queue_index))
+        .route("/queue/move", post(move_queue_item)) // NUEVA RUTA
         .route("/volume", get(get_volume).post(set_volume))
         .route("/toggle-mute", post(toggle_mute))
         .route("/play", post(play))
@@ -236,8 +267,9 @@ pub async fn start_server(port: u16, app_state: Arc<AppState>) -> Result<String,
         .route("/like", post(like))
         .route("/dislike", post(dislike))
         .route("/search", post(search))
+        .route("/shuffle", post(toggle_shuffle))
+        .route("/repeat", post(toggle_repeat))
         .route("/clear-queue", post(clear_queue));
-
     let app = Router::new()
         .nest("/api/v1", api_v1)
         .layer(CorsLayer::permissive())
