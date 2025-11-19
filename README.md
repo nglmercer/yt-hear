@@ -38,3 +38,7 @@ Since YouTube Music itself is feature-complete as a web app, desktop application
 ### I cannot quit the app
 On windows and Linux, from the system tray, right-click on the yt-hear icon and select `Quit`
 
+- more faqs [Faqs]("./faq.md")
+
+
+## Api Rest documentation [apirest]("./ApiRest.md")

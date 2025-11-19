@@ -2,7 +2,7 @@ use crate::bridge::AppState;
 use axum::{
     extract::{Path, State},
     http::StatusCode,
-    routing::{delete, get, post,patch},
+    routing::{delete, get, patch, post},
     Json, Router,
 };
 use serde::Deserialize;
@@ -47,15 +47,15 @@ struct QueueMovePayload {
 }
 // --- HANDLERS GET ---
 async fn move_queue_item(
-    State(state): State<AppState>, 
-    Json(payload): Json<QueueMovePayload>
+    State(state): State<AppState>,
+    Json(payload): Json<QueueMovePayload>,
 ) -> Json<Value> {
     emit_cmd(
         &state,
-        json!({ 
-            "action": "moveInQueue", 
+        json!({
+            "action": "moveInQueue",
             "fromIndex": payload.from_index,
-            "toIndex": payload.to_index 
+            "toIndex": payload.to_index
         }),
     )
     .await;
